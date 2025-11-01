@@ -1,7 +1,6 @@
 HELP.md
 .gradle
 build/
-!gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
 
@@ -80,12 +79,13 @@ application-prod.yml
 docker-compose.override.yml
 
 ### Build Artifacts ###
-*.jar
 *.war
 *.ear
 *.zip
 *.tar.gz
 *.rar
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
 
 ### Temporary Files ###
 *.tmp
