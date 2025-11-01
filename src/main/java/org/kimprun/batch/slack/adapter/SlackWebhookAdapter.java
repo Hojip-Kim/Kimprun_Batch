@@ -50,7 +50,6 @@ public class SlackWebhookAdapter implements SlackNotificationPort {
                     .block();
 
             if ("ok".equals(response)) {
-                log.info("Slack 메시지 전송 성공");
                 return true;
             } else {
                 log.warn("Slack 메시지 전송 실패: {}", response);
