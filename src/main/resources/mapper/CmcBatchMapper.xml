@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kimprun.batch.cmc.dao.mybatis.CmcBatchMapper">
+    
+    <!-- 코인 맵 데이터 UPSERT -->
+    <insert id="upsertCmcCoinMap" parameterType="list">
+        INSERT INTO cmc_coin (cmc_coin_id, name, symbol, slug, is_active, status, is_mainnet, 
+                              first_historical_data, last_historical_data, registed_at, updated_at)
+        VALUES 
+        <foreach collection="coinMapList" item="coin" separator=",">
+            (#{coin.id}, #{coin.name}, #{coin.symbol}, #{coin.slug}, 
+             COALESCE(#{coin.isActive}, false), COALESCE(#{coin.status}, true), #{coin.isMainnet}, 
+             <choose>
+                 <when test="coin.firstHistoricalData != null">TO_TIMESTAMP(#{coin.firstHistoricalData}, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')</when>
+                 <otherwise>NOW()</otherwise>
+             </choose>,
+             <choose>
+                 <when test="coin.lastHistoricalData != null">TO_TIMESTAMP(#{coin.lastHistoricalData}, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')</when>
+                 <otherwise>NOW()</otherwise>
+             </choose>,
+             NOW(), NOW())
+        </foreach>
+        ON CONFLICT (cmc_coin_id) 
+        DO UPDATE SET
+            name = EXCLUDED.name,
+            symbol = EXCLUDED.symbol,
+            slug = EXCLUDED.slug,
+            is_active = EXCLUDED.is_active,
+            status = EXCLUDED.status,
+            is_mainnet = EXCLUDED.is_mainnet,
+            first_historical_data = EXCLUDED.first_historical_data,
+            last_historical_data = EXCLUDED.last_historical_data,
+            updated_at = EXCLUDED.updated_at
+    </insert>
+    
+    <!-- 코인 맵에서 랭킹 데이터 UPSERT -->
+    <insert id="upsertCmcCoinMapRank" parameterType="list">
+        INSERT INTO cmc_rank (cmc_coin_id, rank, registed_at, updated_at)
+        VALUES 
+        <foreach collection="rankedCoins" item="coin" separator=",">
+            (#{coin.id}, #{coin.rank}, NOW(), NOW())
+        </foreach>
+        ON CONFLICT (cmc_coin_id) 
+        DO UPDATE SET
+            rank = EXCLUDED.rank,
+            updated_at = EXCLUDED.updated_at
+    </insert>
+    
+    <!-- 코인 맵에서 랭킹 FK 업데이트 -->
+    <update id="updateCmcCoinMapRankFk" parameterType="list">
+        <foreach collection="rankedCoins" item="coin" separator=";">
+            UPDATE cmc_coin 
+            SET cmc_rank_id = (SELECT id FROM cmc_rank WHERE cmc_coin_id = #{coin.id}),
+                updated_at = NOW()
+            WHERE cmc_coin_id = #{coin.id}
+        </foreach>
+    </update>
+    
+    <!-- 코인 랭킹 데이터 UPSERT -->
+    <insert id="upsertCmcCoinRank" parameterType="list">
+        INSERT INTO cmc_rank (cmc_coin_id, rank, registed_at, updated_at)
+        VALUES 
+        <foreach collection="latestInfoList" item="coin" separator=",">
+            (#{coin.id}, #{coin.cmcRank}, NOW(), NOW())
+        </foreach>
+        ON CONFLICT (cmc_coin_id) 
+        DO UPDATE SET
+            rank = EXCLUDED.rank,
+            updated_at = EXCLUDED.updated_at
+    </insert>
+    
+    <!-- 코인 테이블에 랭킹 FK 업데이트 (기존 API용) -->
+    <update id="updateCmcCoinRankFk" parameterType="list">
+        <foreach collection="latestInfoList" item="coin" separator=";">
+            UPDATE cmc_coin 
+            SET cmc_rank_id = (SELECT id FROM cmc_rank WHERE cmc_coin_id = #{coin.id}),
+                updated_at = NOW()
+            WHERE cmc_coin_id = #{coin.id}
+        </foreach>
+    </update>
+    
+    <!-- 코인 상세 정보 UPSERT (중복 방지) -->
+    <insert id="insertCmcCoinInfo" parameterType="org.kimprun.batch.cmc.dto.internal.coin.CmcCoinInfoDataDto">
+        INSERT INTO cmc_coin_info (cmc_coin_id, description, infinite_supply, is_fiat, last_updated, registed_at, updated_at)
+        VALUES (
+            #{coinInfo.id},
+            COALESCE(#{coinInfo.description}, ''), 
+            COALESCE(#{coinInfo.infiniteSupply}, false), 
+            0, NOW(), NOW(), NOW()
+        )
+        ON CONFLICT (cmc_coin_id) DO UPDATE SET
+            description = EXCLUDED.description,
+            infinite_supply = EXCLUDED.infinite_supply,
+            is_fiat = EXCLUDED.is_fiat,
+            last_updated = EXCLUDED.last_updated,
+            updated_at = NOW()
+    </insert>
+    
+    <!-- 코인 테이블에 코인 상세 정보 FK 업데이트 (중복 방지) -->
+    <update id="updateCmcCoinWithCoinInfo">
+        UPDATE cmc_coin 
+        SET cmc_coin_info_id = (
+            SELECT id FROM cmc_coin_info WHERE cmc_coin_id = #{coinInfo.id} LIMIT 1
+        ),
+        logo = COALESCE(#{coinInfo.logo}, ''),
+        updated_at = NOW()
+        WHERE cmc_coin_id = #{coinInfo.id}
+        AND (cmc_coin_info_id IS NULL OR cmc_coin_info_id != (
+            SELECT id FROM cmc_coin_info WHERE cmc_coin_id = #{coinInfo.id} LIMIT 1
+        ))
+    </update>
+    
+    <!-- 코인 ID 조회 -->
+    <select id="getCmcCoinIds" resultType="Long">
+        SELECT cmc_coin_id FROM cmc_coin ORDER BY cmc_coin_id LIMIT #{limit}
+    </select>
+    
+    <!-- 거래소 맵 데이터 UPSERT -->
+    <insert id="upsertCmcExchangeMap" parameterType="list">
+        INSERT INTO cmc_exchange (cmc_exchange_id, name, slug, is_active, is_listed, 
+                                 description, logo, date_launched, registed_at, updated_at)
+        VALUES 
+        <foreach collection="exchangeMapList" item="exchange" separator=",">
+            (#{exchange.id}, #{exchange.name}, #{exchange.slug}, 
+             #{exchange.active}, #{exchange.listed}, 
+             '', '', NOW(), NOW(), NOW())
+        </foreach>
+        ON CONFLICT (cmc_exchange_id) 
+        DO UPDATE SET
+            name = EXCLUDED.name,
+            slug = EXCLUDED.slug,
+            is_active = EXCLUDED.is_active,
+            is_listed = EXCLUDED.is_listed,
+            updated_at = EXCLUDED.updated_at
+    </insert>
+    
+    <!-- 거래소 정보 조회 (cmc_exchange_id 기반) -->
+    <select id="getExchangeInfoIdByExchangeId" resultType="Long">
+        SELECT cmc_exchange_info_id FROM cmc_exchange WHERE cmc_exchange_id = #{exchangeId}
+    </select>
+    
+    <insert id="insertCmcExchangeInfo">
+        INSERT INTO cmc_exchange_info (cmc_exchange_id, fiats, registed_at, updated_at)
+        VALUES (#{exchangeId}, #{fiats}, NOW(), NOW())
+        ON CONFLICT (cmc_exchange_id) DO UPDATE SET
+            fiats = EXCLUDED.fiats,
+            updated_at = NOW()
+    </insert>
+    
+    <update id="updateCmcExchangeInfo">
+        UPDATE cmc_exchange_info 
+        SET fiats = #{fiats},
+            updated_at = NOW()
+        WHERE id = #{exchangeInfoId}
+    </update>
+    
+    <!-- 거래소 메타 정보 조회 (cmc_exchange_id 기반) -->
+    <select id="getExchangeMetaIdByExchangeId" resultType="Long">
+        SELECT cmc_exchange_meta_id FROM cmc_exchange WHERE cmc_exchange_id = #{exchangeId}
+    </select>
+    
+    <insert id="insertCmcExchangeMeta" parameterType="org.kimprun.batch.cmc.dto.internal.exchange.CmcExchangeDetailDto">
+        INSERT INTO cmc_exchange_meta (cmc_exchange_id, market_fee, taker_fee, spot_volume_usd, spot_volume_last_updated, weekly_visits, registed_at, updated_at)
+        VALUES (#{exchangeDetail.id}, COALESCE(#{exchangeDetail.marketFee}, 0.0), COALESCE(#{exchangeDetail.takerFee}, 0.0), COALESCE(#{exchangeDetail.spotVolumeUsd}, 0.0), 
+                NOW(), COALESCE(#{exchangeDetail.weeklyVisited}, 0), NOW(), NOW())
+        ON CONFLICT (cmc_exchange_id) DO UPDATE SET
+            market_fee = EXCLUDED.market_fee,
+            taker_fee = EXCLUDED.taker_fee,
+            spot_volume_usd = EXCLUDED.spot_volume_usd,
+            spot_volume_last_updated = EXCLUDED.spot_volume_last_updated,
+            weekly_visits = EXCLUDED.weekly_visits,
+            updated_at = NOW()
+    </insert>
+    
+    <update id="updateCmcExchangeMeta" parameterType="org.kimprun.batch.cmc.dto.internal.exchange.CmcExchangeDetailDto">
+        UPDATE cmc_exchange_meta 
+        SET market_fee = COALESCE(#{exchangeDetail.marketFee}, 0.0),
+            taker_fee = COALESCE(#{exchangeDetail.takerFee}, 0.0),
+            spot_volume_usd = COALESCE(#{exchangeDetail.spotVolumeUsd}, 0.0),
+            spot_volume_last_updated = NOW(),
+            weekly_visits = COALESCE(#{exchangeDetail.weeklyVisited}, 0),
+            updated_at = NOW()
+        WHERE id = #{exchangeMetaId}
+    </update>
+    
+    <!-- 거래소 URL 정보 조회 (cmc_exchange_id 기반) -->
+    <select id="getExchangeUrlIdByExchangeId" resultType="Long">
+        SELECT cmc_exchange_url_id FROM cmc_exchange WHERE cmc_exchange_id = #{exchangeId}
+    </select>
+    
+    <insert id="insertCmcExchangeUrl">
+        INSERT INTO cmc_exchange_url (cmc_exchange_id, website, twitter, register, registed_at, updated_at)
+        VALUES (#{exchangeId}, #{website}, '', '', NOW(), NOW())
+        ON CONFLICT (cmc_exchange_id) DO UPDATE SET
+            website = EXCLUDED.website,
+            updated_at = NOW()
+    </insert>
+    
+    <update id="updateCmcExchangeUrl">
+        UPDATE cmc_exchange_url 
+        SET website = #{website},
+            updated_at = NOW()
+        WHERE id = #{exchangeUrlId}
+    </update>
+    
+    <!-- 거래소 테이블에 상세 정보 업데이트 -->
+    <update id="updateCmcExchangeWithDetails">
+        UPDATE cmc_exchange 
+        SET cmc_exchange_info_id = #{exchangeInfoId},
+            cmc_exchange_meta_id = #{exchangeMetaId},
+            cmc_exchange_url_id = #{exchangeUrlId},
+            description = COALESCE(#{exchangeDetail.description}, ''), 
+            logo = COALESCE(#{exchangeDetail.logo}, ''),
+            date_launched = COALESCE(#{exchangeDetail.dateLaunched}::timestamp, NOW()),
+            updated_at = NOW()
+        WHERE cmc_exchange_id = #{exchangeDetail.id}
+    </update>
+    
+    <!-- 거래소 ID 조회 (제한적) -->
+    <select id="getCmcExchangeIds" resultType="Integer">
+        SELECT cmc_exchange_id FROM cmc_exchange ORDER BY cmc_exchange_id LIMIT #{limit}
+    </select>
+    
+    <!-- 코인 존재 확인 -->
+    <select id="existsCmcCoin" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM cmc_coin WHERE cmc_coin_id = #{cmcCoinId}
+    </select>
+    
+    <!-- 거래소 존재 확인 -->
+    <select id="existsCmcExchange" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM cmc_exchange WHERE cmc_exchange_id = #{cmcExchangeId}
+    </select>
+    
+    <!-- 매핑 가능한 코인 ID 조회 -->
+    <select id="getMappableCoinIds" resultType="map">
+        SELECT DISTINCT c.id as coin_id, c.symbol
+        FROM coin c
+        WHERE EXISTS (
+            SELECT 1 FROM cmc_coin cc 
+            WHERE UPPER(cc.symbol) = UPPER(c.symbol) 
+            AND cc.coin_id IS NULL
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM cmc_coin cc2 
+            WHERE cc2.coin_id = c.id
+        )
+    </select>
+    
+    <!-- CMC Coin과 기존 Coin 매핑 -->
+    <update id="linkCmcCoinWithExistingCoin">
+        UPDATE cmc_coin 
+        SET coin_id = #{coinId}, 
+            updated_at = NOW()
+        WHERE id = (
+            SELECT cc.id
+            FROM cmc_coin cc
+            LEFT JOIN cmc_rank cr ON cc.cmc_coin_id = cr.cmc_coin_id
+            WHERE UPPER(cc.symbol) = UPPER(#{symbol})
+            AND cc.coin_id IS NULL
+            ORDER BY COALESCE(cr.rank, 999999), cc.cmc_coin_id
+            LIMIT 1
+        )
+        AND coin_id IS NULL
+    </update>
+    
+    <!-- 모든 CMC Coin ID 조회 -->
+    <select id="getAllCmcCoinIds" resultType="Long">
+        SELECT cmc_coin_id FROM cmc_coin ORDER BY cmc_coin_id
+    </select>
+    
+    <!-- 코인 메타 정보 UPSERT (중복 방지) -->
+    <insert id="insertCmcCoinMeta" parameterType="org.kimprun.batch.cmc.dto.internal.coin.CmcApiDataDto">
+        INSERT INTO cmc_coin_meta (cmc_coin_id, market_cap, market_cap_dominance, fully_diluted_market_cap,
+                                  circulating_supply, total_supply, max_supply, 
+                                  self_reported_circulating_supply, self_reported_market_cap,
+                                  registed_at, updated_at)
+        VALUES (
+            #{coin.id},
+            COALESCE(#{coin.quote.USD.marketCap}, '0'),
+            COALESCE(#{coin.quote.USD.marketCapDominance}, 0),
+            COALESCE(#{coin.quote.USD.fullyDilutedMarketCap}, '0'),
+            COALESCE(#{coin.circulatingSupply}, '0'),
+            COALESCE(#{coin.totalSupply}, '0'), 
+            COALESCE(#{coin.maxSupply}, '0'),
+            COALESCE(#{coin.selfReportedCirculatingSupply}, '0'),
+            COALESCE(#{coin.selfReportedMarketCap}, '0'),
+            NOW(), NOW()
+        )
+        ON CONFLICT (cmc_coin_id) DO UPDATE SET
+            market_cap = EXCLUDED.market_cap,
+            market_cap_dominance = EXCLUDED.market_cap_dominance,
+            fully_diluted_market_cap = EXCLUDED.fully_diluted_market_cap,
+            circulating_supply = EXCLUDED.circulating_supply,
+            total_supply = EXCLUDED.total_supply,
+            max_supply = EXCLUDED.max_supply,
+            self_reported_circulating_supply = EXCLUDED.self_reported_circulating_supply,
+            self_reported_market_cap = EXCLUDED.self_reported_market_cap,
+            updated_at = NOW()
+    </insert>
+    
+    <!-- 코인 정보에 메타 ID 연결 (중복 방지) -->
+    <update id="updateCmcCoinInfoWithMeta">
+        UPDATE cmc_coin_info 
+        SET cmc_coin_meta_id = (
+            SELECT id FROM cmc_coin_meta 
+            WHERE cmc_coin_id = #{cmcCoinId} 
+            LIMIT 1
+        ),
+        updated_at = NOW()
+        WHERE id = (
+            SELECT cmc_coin_info_id FROM cmc_coin WHERE cmc_coin_id = #{cmcCoinId}
+        )
+        AND cmc_coin_meta_id IS NULL
+        AND EXISTS (
+            SELECT 1 FROM cmc_coin_meta WHERE cmc_coin_id = #{cmcCoinId}
+        )
+    </update>
+    
+    
+    <!-- CMC Mainnet 데이터 삭제 -->
+    <delete id="deleteCmcMainnet">
+        DELETE FROM cmc_mainnet WHERE cmc_coin_id = #{coinId}
+    </delete>
+    
+    <!-- CMC Mainnet 데이터 UPSERT -->
+    <insert id="insertCmcMainnet">
+        INSERT INTO cmc_mainnet (explorer_url, cmc_coin_id, registed_at, updated_at)
+        VALUES (#{explorerUrl}, #{coinId}, NOW(), NOW())
+        ON CONFLICT (cmc_coin_id, explorer_url) DO UPDATE SET
+            updated_at = NOW()
+    </insert>
+    
+    <!-- CMC Platform 데이터 삭제 -->
+    <delete id="deleteCmcPlatform">
+        DELETE FROM cmc_platform WHERE cmc_coin_id = #{coinId}
+    </delete>
+    
+    <!-- CMC Platform 데이터 UPSERT -->
+    <insert id="insertCmcPlatform" parameterType="org.kimprun.batch.cmc.dto.internal.coin.CmcCoinInfoDataDto">
+        INSERT INTO cmc_platform (name, symbol, cmc_coin_id, registed_at, updated_at)
+        VALUES (#{coinInfo.platform.name}, #{coinInfo.platform.symbol}, #{coinInfo.id}, NOW(), NOW())
+        ON CONFLICT (cmc_coin_id) DO UPDATE SET
+            name = EXCLUDED.name,
+            symbol = EXCLUDED.symbol,
+            updated_at = NOW()
+    </insert>
+    
+    <!-- 배치 실행 조건 검사: 코인 맵 동기화 필요 여부 -->
+    <!-- 최근 24시간 내 데이터가 없으면 동기화 필요 -->
+    <select id="shouldRunCoinMapSync" resultType="boolean">
+        SELECT NOT EXISTS (
+            SELECT 1 FROM cmc_coin 
+            WHERE updated_at > NOW() - INTERVAL '24 hours'
+            LIMIT 1
+        ) OR COUNT(*) = 0
+        FROM cmc_coin
+    </select>
+    
+    <!-- 배치 실행 조건 검사: 코인 상세 정보 동기화 필요 여부 -->
+    <!-- CMC coin 데이터는 있지만 상세 정보가 없는 경우 동기화 필요 -->
+    <select id="shouldRunCoinInfoSync" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM cmc_coin cc
+            WHERE cc.cmc_coin_info_id IS NULL
+            LIMIT 1
+        )
+    </select>
+    
+    <!-- 배치 실행 조건 검사: 거래소 동기화 필요 여부 -->
+    <!-- 최근 일주일 내 데이터가 없으면 동기화 필요 -->
+    <select id="shouldRunExchangeSync" resultType="boolean">
+        SELECT NOT EXISTS (
+            SELECT 1 FROM cmc_exchange 
+            WHERE updated_at > NOW() - INTERVAL '7 days'
+            LIMIT 1
+        ) OR COUNT(*) = 0
+        FROM cmc_exchange
+    </select>
+    
+    <!-- 배치 실행 조건 검사: 코인 랭킹 동기화 필요 여부 -->
+    <!-- cmc_rank 테이블이 비어있거나, cmc_coin에 rank가 연결되지 않은 코인이 있으면 동기화 필요 -->
+    <select id="shouldRunCoinRankSync" resultType="boolean">
+        SELECT (SELECT COUNT(*) FROM cmc_rank) = 0
+        OR EXISTS (
+            SELECT 1 FROM cmc_coin 
+            WHERE cmc_rank_id IS NULL 
+            AND cmc_coin_id IS NOT NULL
+            LIMIT 1
+        )
+    </select>
+    
+    <!-- 배치 실행 조건 검사: 코인 메타 동기화 필요 여부 -->
+    <!-- cmc_coin_meta 테이블이 비어있거나, cmc_coin_info에 meta가 연결되지 않은 정보가 있으면 동기화 필요 -->
+    <select id="shouldRunCoinMetaSync" resultType="boolean">
+        SELECT (SELECT COUNT(*) FROM cmc_coin_meta) = 0
+        OR EXISTS (
+            SELECT 1 FROM cmc_coin_info 
+            WHERE cmc_coin_meta_id IS NULL
+            LIMIT 1
+        )
+    </select>
+    
+    <!-- CMC 코인 총 개수 -->
+    <select id="getCmcCoinCount" resultType="long">
+        SELECT COUNT(*) FROM cmc_coin
+    </select>
+    
+    <!-- CMC 거래소 총 개수 -->
+    <select id="getCmcExchangeCount" resultType="long">
+        SELECT COUNT(*) FROM cmc_exchange
+    </select>
+    
+    <!-- 마지막 삽입된 ID 조회 (범용) -->
+    <select id="getLastInsertedId" resultType="Long">
+        SELECT MAX(id) FROM ${tableName}
+    </select>
+    
+</mapper>
