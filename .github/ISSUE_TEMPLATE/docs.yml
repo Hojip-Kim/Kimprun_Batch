@@ -1,0 +1,52 @@
+name: "DOCS: 문서화"
+description: 문서 작성 및 수정을 위한 이슈입니다.
+title: "[DOCS] "
+labels: ["documentation"]
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: 📝 요약
+      description: 어떤 문서 작업인가요?
+      placeholder: 예) 배치 Job 실행 가이드 작성
+    validations:
+      required: true
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: 📚 문서 유형
+      description: 어떤 유형의 문서인가요?
+      options:
+        - README 업데이트
+        - API 문서
+        - 배치 Job 가이드
+        - 설정 가이드
+        - 트러블슈팅 가이드
+        - 아키텍처 문서
+        - 기타
+    validations:
+      required: true
+
+  - type: textarea
+    id: content
+    attributes:
+      label: 📄 문서 내용
+      description: 어떤 내용을 문서화할 예정인가요?
+      placeholder: |
+        - 배치 Job 실행 방법
+        - 스케줄링 설정 방법
+        - CMC API 연동 가이드
+        - 트러블슈팅 케이스
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: 📌 필요성
+      description: 왜 이 문서가 필요한가요?
+      placeholder: |
+        - 신규 팀원 온보딩 시 참고 자료 필요
+        - 배치 Job 운영 가이드 부재
+        - 장애 대응 절차 정리 필요

@@ -1,0 +1,50 @@
+name: "CHORE: 기타 작업"
+description: 빌드, 설정, 의존성 등 기타 작업을 위한 이슈입니다.
+title: "[CHORE] "
+labels: ["chore"]
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: 🔧 요약
+      description: 이슈에 대한 간단한 설명
+      placeholder: 예) Spring Batch 버전 업그레이드
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 📌 배경 및 필요성
+      description: 왜 이 작업이 필요한가요?
+      placeholder: |
+        - 보안 패치가 포함된 새로운 버전 출시
+        - 성능 개선 사항 반영 필요
+        - 신규 기능 활용 필요
+    validations:
+      required: true
+
+  - type: dropdown
+    id: chore-type
+    attributes:
+      label: 🏷️ 작업 유형
+      description: 어떤 유형의 작업인가요?
+      options:
+        - 의존성 업데이트
+        - 빌드 스크립트 수정
+        - CI/CD 파이프라인 수정
+        - 설정 파일 수정
+        - 기타
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: 📋 작업 내용
+      description: 구체적인 작업 내용을 나열해주세요
+      placeholder: |
+        - [ ] Spring Batch 버전 5.0으로 업그레이드
+        - [ ] 변경된 API 적용
+        - [ ] 테스트 실행 및 검증
+        - [ ] 문서 업데이트

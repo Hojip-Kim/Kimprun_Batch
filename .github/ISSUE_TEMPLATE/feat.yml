@@ -1,0 +1,74 @@
+name: "FEAT: 신규 기능"
+description: 새로운 배치 기능 개발을 위한 이슈입니다.
+title: "[FEAT] "
+labels: ["feature", "batch"]
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: ✨ 요약
+      description: 이슈에 대한 간단한 설명
+      placeholder: 예) CMC Exchange 정보 동기화 배치 추가
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 📌 배경 및 문제 정의
+      description: 왜 이 배치 기능이 필요한가요? 어떤 문제가 있었나요?
+      placeholder: |
+        - CMC Exchange 정보가 데이터베이스에 없어서 거래소 매핑이 불가능
+        - 정기적으로 CMC API로부터 Exchange 정보를 가져와야 함
+        - 수동으로 데이터를 입력하는 것은 비효율적
+    validations:
+      required: true
+
+  - type: dropdown
+    id: batch-type
+    attributes:
+      label: 🔄 배치 유형
+      description: 어떤 유형의 배치 작업인가요?
+      options:
+        - CMC 코인 정보 동기화
+        - CMC 거래소 정보 동기화
+        - 데이터 정리/정합성 체크
+        - 통계/리포트 생성
+        - 기타
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: ✅ 체크리스트
+      options:
+        - label: Reader 구현 완료
+        - label: Processor 구현 완료
+        - label: Writer 구현 완료
+        - label: Job 설정 완료
+        - label: 스케줄링 설정 완료
+        - label: 테스트 코드 작성 완료
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: ✅ 기대 결과
+      description: 이 배치가 완료되었을 때 어떻게 되어야 하나요?
+      placeholder: |
+        - 매일 자정에 CMC API로부터 최신 Exchange 정보를 가져온다
+        - 새로운 Exchange는 데이터베이스에 추가된다
+        - 기존 Exchange 정보는 업데이트된다
+        - 배치 실행 로그가 기록된다
+    validations:
+      required: true
+
+  - type: textarea
+    id: schedule
+    attributes:
+      label: ⏰ 스케줄 정보
+      description: 배치 실행 스케줄을 정의해주세요
+      placeholder: |
+        - 실행 주기: 매일 자정 (0 0 * * * ?)
+        - 예상 실행 시간: 약 5분
+        - 재시도 정책: 실패 시 3회 재시도

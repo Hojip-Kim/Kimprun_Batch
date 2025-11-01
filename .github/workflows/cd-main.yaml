@@ -1,0 +1,101 @@
+#  개발 서버에 배포
+name: CD-main
+
+on:
+  workflow_run:
+    workflows:
+      - 'CI-main'
+    types:
+      - completed
+    branches:
+      - 'main'
+
+jobs:
+  build-and-push:
+    # CI 워크플로우 성공했을 시 실행
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      # 커밋 아이디 읽기
+      - name: Download commit ID artifact
+        uses: dawidd6/action-download-artifact@v4
+        with:
+          workflow: ci-main
+          run_id: ${{ github.event.workflow_run.id }}
+          name: commit-id
+          path: .
+          github_token: ${{ secrets.CHARTS_REPO_PAT }}
+
+      - name: Read commit ID
+        id: read-commit-id
+        run: |
+          COMMIT_ID=$(cat commit-id.txt)
+          echo "COMMIT_ID=${COMMIT_ID}" >> $GITHUB_ENV
+          echo "Commit ID : ${COMMIT_ID}"
+
+      - name: Checkout Source code
+        uses: actions/checkout@v4
+        with:
+          path: ./kimprun_batch
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        run: |
+          cd ./kimprun_batch
+          docker build --platform linux/amd64 -t hojipkim/kimprun_batch:${{ env.COMMIT_ID }} .
+          docker push hojipkim/kimprun_batch:${{ env.COMMIT_ID }}
+          echo "✅ Docker image pushed: hojipkim/kimprun_batch:${{ env.COMMIT_ID }}"
+    outputs:
+      commit-id: ${{ env.COMMIT_ID }}
+
+  chart-update:
+    needs: build-and-push
+    runs-on: self-hosted
+    steps:
+      - name: Read commit ID from previous job
+        run: |
+          echo "COMMIT_ID=${{ needs.build-and-push.outputs.commit-id }}" >> $GITHUB_ENV
+          echo "Commit ID : ${{ needs.build-and-push.outputs.commit-id }}"
+
+      - name: Checkout charts repository
+        uses: actions/checkout@v4
+        with:
+          repository: Hojip-Kim/Kimprun_HelmCharts
+          ref: main
+          token: ${{ secrets.CHARTS_REPO_PAT }}
+
+      - name: Update batch image tag in values.yaml
+        shell: bash
+        run: |
+          echo "커밋 아이디 : $COMMIT_ID"
+          yq -i '.batch.image.tag = "'${COMMIT_ID}'"' values.yaml
+          cat values.yaml | grep -A 3 "batch:"
+
+      - name: Commit and push changes to charts repository
+        run: |
+          git add values.yaml
+          git commit -m "🚀 Update batch image tag to $COMMIT_ID"
+          git push origin main
+
+      - name: Deployment summary
+        run: |
+          echo "🎉 ===== DEPLOYMENT SUMMARY ====="
+          echo "📦 Image: hojipkim/kimprun_batch:${{ env.COMMIT_ID }}"
+          echo "🔄 Commit: ${{ github.sha }}"
+          echo "🌐 Environment: Development"
+          echo "⏰ Deployed at: $(date)"
+          echo "🔗 ArgoCD: https://argocd.kimprun.com"
+          echo "================================"
+
+      - name: Clean up workspace
+        if: always()
+        run: |
+          rm -rf $GITHUB_WORKSPACE/*

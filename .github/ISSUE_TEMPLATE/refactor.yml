@@ -1,0 +1,78 @@
+name: "REFACTOR: 리팩터링"
+description: 코드 개선 및 리팩터링을 위한 이슈입니다.
+title: "[REFACTOR] "
+labels: ["refactor"]
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: ♻️ 요약
+      description: 어떤 리팩터링 작업인가요?
+      placeholder: 예) 배치 Step 구조 개선
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: 📌 현재 상태
+      description: 현재 코드의 어떤 부분이 문제인가요?
+      placeholder: |
+        - Reader, Processor, Writer가 하나의 클래스에 모두 구현되어 있음
+        - 코드 중복이 많고 가독성이 떨어짐
+        - 테스트하기 어려운 구조
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: 🎯 개선 목표
+      description: 어떻게 개선할 예정인가요?
+      placeholder: |
+        - Reader, Processor, Writer를 별도 클래스로 분리
+        - 공통 로직을 추상 클래스로 추출
+        - 단위 테스트 가능한 구조로 개선
+    validations:
+      required: true
+
+  - type: dropdown
+    id: refactor-type
+    attributes:
+      label: 🏷️ 리팩터링 유형
+      description: 어떤 유형의 리팩터링인가요?
+      options:
+        - 코드 구조 개선
+        - 설계 패턴 적용
+        - 성능 최적화
+        - 중복 코드 제거
+        - 네이밍 개선
+        - 테스트 코드 개선
+        - 기타
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: 📋 작업 목록
+      description: 구체적인 작업 내용을 나열해주세요
+      placeholder: |
+        - [ ] Reader 클래스 분리
+        - [ ] Processor 클래스 분리
+        - [ ] Writer 클래스 분리
+        - [ ] 공통 로직 추상화
+        - [ ] 단위 테스트 추가
+        - [ ] 문서 업데이트
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: considerations
+    attributes:
+      label: ⚠️ 고려사항
+      options:
+        - label: Breaking Change 없음
+        - label: 기존 배치 Job 동작 유지
+        - label: 성능 영향 최소화
+        - label: 테스트 커버리지 유지/개선
