@@ -41,7 +41,6 @@ jobs:
       - name: Run unit test
         run: ./gradlew test
         working-directory: ./kimprun_batch
-      # 테스트 결과 업로드 (단위테스트 실패 시)
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: failure() && steps.run-unit-test.outcome == 'failure'
