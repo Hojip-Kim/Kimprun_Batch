@@ -32,7 +32,6 @@ public class SlackWebhookAdapter implements SlackNotificationPort {
     @Override
     public boolean sendMessage(SlackMessage message) {
         if (webhookUrl == null || webhookUrl.isEmpty()) {
-            log.warn("Slack Webhook URL이 설정되지 않았습니다. 메시지를 전송하지 않습니다.");
             return false;
         }
 
