@@ -1,0 +1,101 @@
+HELP.md
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### macOS ###
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+### Windows ###
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+
+### Linux ###
+*~
+.directory
+.Trash-*
+
+### Logs ###
+*.log
+logs/
+log/
+*.log.*
+
+### Sensitive Configuration ###
+application.yml
+application-local.yml
+application-dev.yml
+application-prod.yml
+!application.yml.example
+
+### Environment Variables ###
+*.env
+.env
+.env.*
+
+### Credentials & Secrets ###
+*credentials*
+*secret*
+*password*
+
+### Docker ###
+docker-compose.override.yml
+
+### Build Artifacts ###
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+### Temporary Files ###
+*.tmp
+*.temp
+*.swp
+*.swo
+.cache/
+
+### Database ###
+*.db
+*.sqlite
+*.sqlite3
+dump.rdb
